@@ -1,0 +1,80 @@
+/*
+Programmer: Ryan Blajda
+Comments:
+*/
+
+/*** DIRECTIVES ****/
+#SYMBOL_NAME "Black Magic Videohub v1"
+#HINT "controls video routing of the videohub"
+#CATEGORY "46" "RBLAJDA" // Custom
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+#PRINT_TO_TRACE
+#DEFINE_CONSTANT ciMaximumEndpointConnections 120
+
+#HELP_BEGIN
+#HELP_END
+
+/*** INPUTS ***/
+DIGITAL_INPUT _SKIP_;
+DIGITAL_INPUT Connected_Fb;
+DIGITAL_INPUT _SKIP_;
+STRING_INPUT rx[255];
+STRING_INPUT _SKIP_;
+ANALOG_INPUT Input_For_Output[ciMaximumEndpointConnections];
+
+/*** PARAMETERS ***/
+INTEGER_PARAMETER Poll_Time;
+
+#BEGIN_PARAMETER_PROPERTIES Poll_Time
+
+propValidUnits = unitTime;
+propDefaultUnit = unitTime;
+propBounds = 1s , 5s;
+propDefaultValue = 5s;
+propShortDescription= "interval between ping commands to keep the connection alive";
+
+#BEGIN_PROP_FULL_DESCRIPTION
+#END_PROP_FULL_DESCRIPTION
+
+#BEGIN_PROP_NOTES
+#END_PROP_NOTES
+
+#END_PARAMETER_PROPERTIES
+
+/*** OUTPUTS ***/
+STRING_OUTPUT _SKIP_, _SKIP_, _SKIP_;
+STRING_OUTPUT tx;
+
+/*** GLOBAL VARIABLES ***/
+
+/*** FUNCTIONS ***/
+FUNCTION PollDevice()
+{
+	Wait(Poll_Time, Poll)
+	{ 
+		tx = "PING:\r\r";
+
+		if (Connected_Fb = On) { PollDevice(); }
+	}
+}
+
+/*** EVENT HANDLERS ***/
+CHANGE Connected_Fb
+{
+	if (Connected_Fb = On) { PollDevice(); }
+	else { CancelWait(Poll); }
+}
+
+CHANGE Input_For_Output
+{
+	integer iChanged, selectedOutputIndex, selectedInputIndex;
+	string cmd[255];
+	iChanged = GetLastModifiedArrayIndex();
+	
+	selectedOutputIndex = iChanged - 1;
+	selectedOutputIndex = Input_For_Output[iChanged] - 1;
+
+	makestring(cmd, "VIDEO OUTPUT ROUTING:\r%d %d\r\r", selectedOutputIndex, selectedInputIndex);
+}
